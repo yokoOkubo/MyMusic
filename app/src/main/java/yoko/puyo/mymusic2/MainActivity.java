@@ -31,7 +31,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     TextView text1;
 
-    @Override
+    //-----------------------------------------------------------------画面がcreateされた時
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -45,31 +45,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         text1 = findViewById(R.id.text1);
     }
 
-    @Override
+    //-----------------------------------------------------------------画面が隠れるとき
     protected void onPause() {
         super.onPause();
         sensorManager.unregisterListener(this, accel);
         sensorManager.unregisterListener(this, mag);
     }
-
-    @Override
+    //-----------------------------------------------------------------画面が前面に来た時
     protected void onResume() {
         super.onResume();
 
-
-        //第3引数はデータ取得間隔　SensorManager.SENSOR_DELAY_FASTEST、NORMALなど　p172でも
+        //第3引数はデータ取得間隔　SensorManager.SENSOR_DELAY_FASTEST、NORMALなど　
         sensorManager.registerListener(this,accel,100000);
         sensorManager.registerListener(this,mag, 100000);
 
-        TypedArray notes = getResources().obtainTypedArray(R.array.notes);
+        //TypedArrayはリソースから取得した値の配列を格納するコンテナ
+        // この構造体から値を取り出すのに使われるインデックスはリソースの位置
+        TypedArray notes = getResources().obtainTypedArray(R.array.notes);//R.array.notesからTypedArray取得
         mplayer = new MediaPlayer[notes.length()];
         for(int i=0; i<notes.length(); i++) {
+            //notesのi番目のリソースID（MIDIファイル）を取得し（なければ-1）、それを鳴らすMediaPlayerをcreate
             mplayer[i] = MediaPlayer.create(this, notes.getResourceId(i, -1));
         }
-//        playSound(9);
     }
 
-    @Override
+    //-----------------------------------------------------------------センサの値が変化した時
     public void onSensorChanged(SensorEvent event) {
         float[]  inR = new float[MATRIX_SIZE];
         float[] outR = new float[MATRIX_SIZE];
@@ -78,10 +78,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         switch (event.sensor.getType()) {
             case Sensor.TYPE_ACCELEROMETER :
-                accelVal = event.values.clone();
+                accelVal = event.values.clone();    //加速度センサの値を保存
                 break;
             case Sensor.TYPE_MAGNETIC_FIELD :
-                magVal = event.values.clone();
+                magVal = event.values.clone();      //地磁気センサの値を保存
                 break;
         }
         if (magVal != null && accelVal != null) {
@@ -104,31 +104,34 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             str.append(rad2Deg(orVal[2]));
             str.append("\n");
 
-            nowScale = rad2Deg(orVal[1]) / 10;
+            nowScale = rad2Deg(orVal[1]) / 10;  //0～9に変換
             str.append("scale:傾斜角方位角/10　");
             str.append(nowScale);
             str.append("\n");
-            nowAzimuth = rad2Deg(orVal[0]);
+            nowAzimuth = rad2Deg(orVal[0]);     //どちらを向いているか
             str.append("方位角　");
             str.append(nowAzimuth);
             text1.setText(str.toString());
 
+            //傾斜角が変わった時だけ鳴らす
             if(nowScale != oldScale) {
                 playSound(nowScale);
                 oldScale = nowScale;
                 oldAzimuth = nowAzimuth;
+            //方位が15度以上変わった時だけ鳴らす
             } else if(Math.abs(oldAzimuth-nowAzimuth) > AZIMUTH_THRESHOLD) {
                 playSound(nowScale);
                 oldAzimuth = nowAzimuth;
             }
         }
     }
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int i) {
-    }
+    //-----------------------------------------------------------------センサの精度が変化した時
+    public void onAccuracyChanged(Sensor sensor, int i) { }
+    //-----------------------------------------------------------------ラジアンから度へ変換
     int rad2Deg(float rad) {
         return (int)Math.abs(Math.toDegrees(rad));
     }
+    //-----------------------------------------------------------------scale番目のファイルを鳴らす
     void playSound(int scale) {
         mplayer[scale].seekTo(0);
         mplayer[scale].start();
